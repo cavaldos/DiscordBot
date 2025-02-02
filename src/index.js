@@ -2,7 +2,10 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { Gemini } = require("./model/google");
 const { GroqAI } = require("./model/groq");
-const client = new Client({
+const splitMessage = require("./config/splitMessage");
+
+// Initialize Gemini Bot
+const GeminiBot = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -10,76 +13,57 @@ const client = new Client({
     ]
 });
 
-client.once('ready', () => {
-    console.log(`Bot đã sẵn sàng! Đăng nhập với tên: ${client.user.tag}`);
+// Initialize Groq Bot
+const GroqBot = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
-client.on('messageCreate', async message => {
+// Handle message processing for both bots
+const handleMessage = async (message, aiModel, botName) => {
     if (message.author.bot) return;
 
-    // Chỉ xử lý khi tin nhắn có mention bot
-    if (!message.mentions.users.has(client.user.id)) return;
-
     try {
-        // Start typing indicator
+        console.log(`[${botName}] User message:`, message.content);
         await message.channel.sendTyping();
 
-        const response = await GroqAI(message.content);
-        const maxLength = 2000;
-
-        const splitMessage = (text) => {
-            const chunks = [];
-            const codeBlockRegex = /```[\s\S]*?```/g;
-            let lastIndex = 0;
-            let match;
-
-            // Xử lý từng code block và text thường
-            while ((match = codeBlockRegex.exec(text)) !== null) {
-                const codeBlock = match[0];
-                const textBefore = text.slice(lastIndex, match.index);
-
-                // Chia text thường thành chunks
-                if (textBefore.length > 0) {
-                    const textChunks = textBefore.match(/[\s\S]{1,1994}/g) || [];
-                    textChunks.forEach(chunk => chunks.push(chunk));
-                }
-
-                // Chia code block nếu quá dài
-                if (codeBlock.length > maxLength) {
-                    const codeContent = codeBlock.slice(3, -3); // Bỏ dấu ```
-                    const codeChunks = codeContent.match(/[\s\S]{1,1994}/g) || [];
-                    codeChunks.forEach((chunk, index) => {
-                        chunks.push(`\`\`\`${index === 0 ? 'cpp' : ''}\n${chunk}\n\`\`\``);
-                    });
-                } else {
-                    chunks.push(codeBlock);
-                }
-
-                lastIndex = codeBlockRegex.lastIndex;
-            }
-
-            // Xử lý phần còn lại sau code block cuối
-            const remainingText = text.slice(lastIndex);
-            if (remainingText.length > 0) {
-                const remainingChunks = remainingText.match(/[\s\S]{1,2000}/g) || [];
-                remainingChunks.forEach(chunk => chunks.push(chunk));
-            }
-
-            return chunks;
-        };
+        const response = await aiModel(message.content);
+        if (!response) return message.reply("AI không phản hồi hoặc có lỗi xảy ra.");
 
         const chunks = splitMessage(response);
-
-        // Gửi từng chunk với định dạng đúng
         for (const chunk of chunks) {
             await message.reply(chunk);
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
-
     } catch (error) {
-        console.error("Error generating response:", error);
+        console.error(`[${botName}] Error generating response:`, error);
         message.reply("Sorry, I couldn't process your request.");
     }
+};
+
+// Set up Gemini Bot events
+GeminiBot.once('ready', () => {
+    console.log(`Gemini Bot đã sẵn sàng! Đăng nhập với tên: ${GeminiBot.user.tag}`);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+GeminiBot.on('messageCreate', async message => {
+    if (!message.mentions.users.has(GeminiBot.user.id)) return;
+    await handleMessage(message, Gemini, "Gemini Bot");
+});
+
+// Set up Groq Bot events
+GroqBot.once('ready', () => {
+    console.log(`Groq Bot đã sẵn sàng! Đăng nhập với tên: ${GroqBot.user.tag}`);
+});
+
+GroqBot.on('messageCreate', async message => {
+    if (!message.mentions.users.has(GroqBot.user.id)) return;
+    await handleMessage(message, GroqAI, "Groq Bot");
+});
+
+// Login both bots with their respective tokens
+GeminiBot.login(process.env.DISCORD_GEMINI_TOKEN);
+GroqBot.login(process.env.DISCORD_GROQ_TOKEN);

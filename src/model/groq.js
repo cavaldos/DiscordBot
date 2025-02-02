@@ -12,12 +12,10 @@ async function GroqAI(question) {
     try {
         const now = Date.now();
 
-        // Nếu đã có cuộc trò chuyện và khoảng thời gian kể từ tin nhắn cuối cùng vượt quá 5 phút, reset context
         if (conversation.length && now - lastInteraction > 200000) {
             conversation = [];
         }
 
-        // Thêm câu hỏi mới vào context
         conversation.push({
             role: "user",
             content: question
@@ -33,14 +31,12 @@ async function GroqAI(question) {
             stream: false,
         });
 
-        // Lấy kết quả phản hồi và thêm vào context
         const answer = chatCompletion.choices[0].message.content;
         conversation.push({
             role: "assistant",
             content: answer
         });
 
-        // Cập nhật thời điểm tương tác cuối cùng sau khi nhận câu trả lời
         lastInteraction = Date.now();
 
         return answer;
