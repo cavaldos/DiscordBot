@@ -2,10 +2,13 @@ version: '3.8'
 
 services:
   discordbot:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: discordbot
     env_file:
       - .env
     volumes:
       - .:/app
+      - /app/node_modules
     restart: unless-stopped

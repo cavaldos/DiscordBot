@@ -20,7 +20,7 @@ client.on('messageCreate', async message => {
         // Start typing indicator
         await message.channel.sendTyping();
 
-        const response = await Gemini(message.content);
+        const response = await GroqAI(message.content);
         const maxLength = 2000;
 
         const splitMessage = (text) => {

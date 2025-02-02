@@ -2,10 +2,15 @@ FROM node:18
 
 WORKDIR /app
 
-COPY package*.json ./
+# Install yarn globally
+RUN npm install -g yarn
 
-RUN npm install
+COPY package*.json ./
+COPY yarn.lock ./
+
+# Use yarn to install dependencies
+RUN yarn install
 
 COPY . .
 
-CMD ["npm", "start"]
+CMD ["yarn", "start"]
