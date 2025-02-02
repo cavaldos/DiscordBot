@@ -13,8 +13,12 @@ const client = new Client({
 client.once('ready', () => {
     console.log(`Bot đã sẵn sàng! Đăng nhập với tên: ${client.user.tag}`);
 });
+
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
+
+    // Chỉ xử lý khi tin nhắn có mention bot
+    if (!message.mentions.users.has(client.user.id)) return;
 
     try {
         // Start typing indicator
@@ -69,7 +73,7 @@ client.on('messageCreate', async message => {
         // Gửi từng chunk với định dạng đúng
         for (const chunk of chunks) {
             await message.reply(chunk);
-            await new Promise(resolve => setTimeout(resolve, 1000)); 
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
     } catch (error) {
