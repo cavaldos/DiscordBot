@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  discordbot:
+    build: .
+    container_name: discordbot
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    restart: unless-stopped
