@@ -18,3 +18,29 @@ A Discord bot built with Discord.js that helps manage and enhance your Discord s
 ## Installation
 
 1. Clone this repository
+
+```bash
+git clone github.com/your-username/discord-bot
+```
+
+2. Install dependencies
+
+```bash
+npm install
+```
+
+3. Rename `.env.example` to `.env` and add your Discord Bot Token
+4. Start the bot
+
+```bash
+npm start
+npm run dev # for development
+
+```
+
+5. google colab
+```shell
+!sudo apt update
+!sudo apt install -y pciutils
+!curl -fsSL https://ollama.com/install.sh | sh
+```
