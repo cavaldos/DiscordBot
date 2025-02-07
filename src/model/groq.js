@@ -3,51 +3,49 @@ const Groq = require("groq-sdk");
 const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
 });
-
-// Lưu trữ context của cuộc trò chuyện
-let conversation = [];
-let lastInteraction = Date.now();
-
-async function GroqAI(question) {
+async function GroqAI(question, context) {
     try {
-        const now = Date.now();
-
-        // Nếu đã có cuộc trò chuyện và khoảng thời gian kể từ tin nhắn cuối cùng vượt quá 5 phút, reset context
-        if (conversation.length && now - lastInteraction > 200000) {
-            conversation = [];
-        }
-
-        // Thêm câu hỏi mới vào context
-        conversation.push({
-            role: "user",
-            content: question
-        });
-
         const chatCompletion = await groq.chat.completions.create({
-            messages: conversation,
+            messages:
+                [
+                    {
+                        role: "assistant",
+                        content: `bạn là 1 con AI bằng tiếng việt, bối cảnh là bạn đang trong 1 cuộc trò chuyện,
+                         bạn hãy giựa vào tin nhắn của người khác, và trò chuyện 1 cách tự nhiên nhất, 
+                        có thể sử dụng teencode hoặc những từ viết tắt, sử dụng "m" là bạn, "t" là mình
+                         nếu có ai nhắn tin nghi vấn bạn là bỏ thì hãy trả lời là: "bot cái đ gì m ?"  `
+                    },
+                    {
+                        role: "user",
+                        content: `$${context}`
+                    },
+                    {
+                        role: "user",
+                        content: question
+                    }
+
+                ],
             model: "llama-3.3-70b-versatile",
-            temperature: 0.1,
+            temperature: 0.5,
             max_tokens: 1024,
             top_p: 1,
             stop: null,
             stream: false,
         });
 
-        // Lấy kết quả phản hồi và thêm vào context
         const answer = chatCompletion.choices[0].message.content;
-        conversation.push({
-            role: "assistant",
-            content: answer
-        });
-
-        // Cập nhật thời điểm tương tác cuối cùng sau khi nhận câu trả lời
-        lastInteraction = Date.now();
-
         return answer;
     } catch (error) {
         console.error("Error in GroqAI:", error);
         throw error;
     }
 }
+
+const testfv = async () => {
+    const messages = await GroqAI("m dang lam gi vay");
+    console.log(messages);
+}
+
+testfv();
 
 module.exports = { GroqAI };

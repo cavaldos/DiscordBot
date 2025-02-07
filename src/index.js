@@ -1,85 +1,31 @@
-require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
-const { Gemini } = require("./model/google");
-const { GroqAI } = require("./model/groq");
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
+const getMessages = require('./utils/getMessage');
+const sendMessage = require('./utils/send');
+const { GroqAI } = require('./model/groq');
 
-client.once('ready', () => {
-    console.log(`Bot đã sẵn sàng! Đăng nhập với tên: ${client.user.tag}`);
-});
-
-client.on('messageCreate', async message => {
-    if (message.author.bot) return;
-
-    // Chỉ xử lý khi tin nhắn có mention bot
-    if (!message.mentions.users.has(client.user.id)) return;
-
+async function runBot() {
     try {
-        // Start typing indicator
-        await message.channel.sendTyping();
-
-        const response = await GroqAI(message.content);
-        const maxLength = 2000;
-
-        const splitMessage = (text) => {
-            const chunks = [];
-            const codeBlockRegex = /```[\s\S]*?```/g;
-            let lastIndex = 0;
-            let match;
-
-            // Xử lý từng code block và text thường
-            while ((match = codeBlockRegex.exec(text)) !== null) {
-                const codeBlock = match[0];
-                const textBefore = text.slice(lastIndex, match.index);
-
-                // Chia text thường thành chunks
-                if (textBefore.length > 0) {
-                    const textChunks = textBefore.match(/[\s\S]{1,1994}/g) || [];
-                    textChunks.forEach(chunk => chunks.push(chunk));
-                }
-
-                // Chia code block nếu quá dài
-                if (codeBlock.length > maxLength) {
-                    const codeContent = codeBlock.slice(3, -3); // Bỏ dấu ```
-                    const codeChunks = codeContent.match(/[\s\S]{1,1994}/g) || [];
-                    codeChunks.forEach((chunk, index) => {
-                        chunks.push(`\`\`\`${index === 0 ? 'cpp' : ''}\n${chunk}\n\`\`\``);
-                    });
-                } else {
-                    chunks.push(codeBlock);
-                }
-
-                lastIndex = codeBlockRegex.lastIndex;
-            }
-
-            // Xử lý phần còn lại sau code block cuối
-            const remainingText = text.slice(lastIndex);
-            if (remainingText.length > 0) {
-                const remainingChunks = remainingText.match(/[\s\S]{1,2000}/g) || [];
-                remainingChunks.forEach(chunk => chunks.push(chunk));
-            }
-
-            return chunks;
-        };
-
-        const chunks = splitMessage(response);
-
-        // Gửi từng chunk với định dạng đúng
-        for (const chunk of chunks) {
-            await message.reply(chunk);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        const messages = await getMessages(3);
+        if (!messages || messages.length === 0) {
+            console.error('Failed to fetch messages.');
+            return;
         }
 
-    } catch (error) {
-        console.error("Error generating response:", error);
-        message.reply("Sorry, I couldn't process your request.");
-    }
-});
+        // Build a context from all messages (oldest at the bottom)
+        // Assuming messages are ordered from newest to oldest, we reverse them.
+        const context = messages.slice().reverse().map(msg => `${msg.author.global_name || msg.author.username}: ${msg.content}`).join('\n');
 
-client.login(process.env.DISCORD_TOKEN);
+        // Use the latest message as the question
+        const latestMessage = messages[0];
+
+        // Generate AI response using context and the latest message
+        const aiResponse = await GroqAI(latestMessage.content, context);
+        if (aiResponse) {
+            await sendMessage(aiResponse);
+        }
+    } catch (error) {
+        console.error('Error in runBot:', error);
+    }
+}
+
+// Run the bot every minute (here using 1 second for testing, adjust as needed)
+setInterval(runBot, 6000);
