@@ -4,7 +4,7 @@ const { Gemini } = require("./model/google");
 const { GroqAI } = require("./model/groq");
 const splitMessage = require("./config/splitMessage");
 const getPublicIP = require("./config/getIP");
-
+const { runCommand, runCommandPromise } = require("./config/runcommand");
 // Initialize bots with common intents
 const commonIntents = [
   GatewayIntentBits.Guilds,
@@ -27,15 +27,21 @@ SystemBot.on("messageCreate", async (message) => {
   if (!message.mentions.users.has(SystemBot.user.id)) return;
   try {
     await message.channel.sendTyping();
-    const ip = await getPublicIP();
-    await message.reply(`Current Public IP: ${ip}`);
+    const content = message.content.toLowerCase();
+    if (content.includes('ip')) {
+      const ip = await getPublicIP();
+      await message.reply(`Current Public IP: ${ip}`);
+    } else if (content.includes('deploy')) {
+      const output = await runCommandPromise();
+      await message.reply(`Deploy Results:\n${output}`);
+    } else {
+      await message.reply('Xin lỗi, tôi chỉ hỗ trợ lệnh: ip và deploy.');
+    }
   } catch (error) {
     console.error('Error in System Bot:', error);
     await message.reply("Sorry, I couldn't process your request.");
   }
 });
-
-
 
 // Handle message processing for AI bots
 const handleMessage = async (message, aiModel, botName) => {
