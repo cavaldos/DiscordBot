@@ -3,9 +3,7 @@ const commands = [
     `cd /home/bourbon/Code/CNPM &&
      git switch production &&
      git pull origin production &&
-    bash install.sh,
-     `
- 
+     bash install.sh`
 ];
 
 function runCommand(index) {
