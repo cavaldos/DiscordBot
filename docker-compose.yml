@@ -10,5 +10,8 @@ services:
       - .env
     volumes:
       - .:/app
-      - /app/node_modules
+      - node_modules_data:/app/node_modules
     restart: unless-stopped
+
+volumes:
+  node_modules_data:
