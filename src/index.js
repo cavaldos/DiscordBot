@@ -3,26 +3,41 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const { Gemini } = require("./model/google");
 const { GroqAI } = require("./model/groq");
 const splitMessage = require("./config/splitMessage");
+const getPublicIP = require("./config/getIP");
 
-// Initialize Gemini Bot
-const GeminiBot = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
+// Initialize bots with common intents
+const commonIntents = [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.GuildMessages,
+  GatewayIntentBits.MessageContent,
+];
+
+const createBot = () => new Client({ intents: commonIntents });
+
+const GeminiBot = createBot();
+const GroqBot = createBot();
+const SystemBot = createBot();
+
+// Set up System Bot events
+SystemBot.once("ready", () => {
+  console.log(`System Bot đã sẵn sàng! Đăng nhập với tên: ${SystemBot.user.tag}`);
 });
 
-// Initialize Groq Bot
-const GroqBot = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
+SystemBot.on("messageCreate", async (message) => {
+  if (!message.mentions.users.has(SystemBot.user.id)) return;
+  try {
+    await message.channel.sendTyping();
+    const ip = await getPublicIP();
+    await message.reply(`Current Public IP: ${ip}`);
+  } catch (error) {
+    console.error('Error in System Bot:', error);
+    await message.reply("Sorry, I couldn't process your request.");
+  }
 });
 
-// Handle message processing for both bots
+
+
+// Handle message processing for AI bots
 const handleMessage = async (message, aiModel, botName) => {
   if (message.author.bot) return;
 
@@ -31,8 +46,9 @@ const handleMessage = async (message, aiModel, botName) => {
     await message.channel.sendTyping();
 
     const response = await aiModel(message.content);
-    if (!response)
+    if (!response) {
       return message.reply("AI không phản hồi hoặc có lỗi xảy ra.");
+    }
 
     const chunks = splitMessage(response);
     for (const chunk of chunks) {
@@ -41,32 +57,30 @@ const handleMessage = async (message, aiModel, botName) => {
     }
   } catch (error) {
     console.error(`[${botName}] Error generating response:`, error);
-    message.reply("Sorry, I couldn't process your request.");
+    await message.reply("Sorry, I couldn't process your request.");
   }
 };
 
-// Set up Gemini Bot events
-GeminiBot.once("ready", () => {
-  console.log(
-    `Gemini Bot đã sẵn sàng! Đăng nhập với tên: ${GeminiBot.user.tag}`,
-  );
-});
+// Set up bot event handlers
+const setupBot = (bot, aiModel, botName) => {
+  bot.once("ready", () => {
+    console.log(`${botName} đã sẵn sàng! Đăng nhập với tên: ${bot.user.tag}`);
+  });
 
-GeminiBot.on("messageCreate", async (message) => {
-  if (!message.mentions.users.has(GeminiBot.user.id)) return;
-  await handleMessage(message, Gemini, "Gemini Bot");
-});
+  bot.on("messageCreate", async (message) => {
+    if (!message.mentions.users.has(bot.user.id)) return;
+    await handleMessage(message, aiModel, botName);
+  });
+};
 
-// Set up Groq Bot events
-GroqBot.once("ready", () => {
-  console.log(`Groq Bot đã sẵn sàng! Đăng nhập với tên: ${GroqBot.user.tag}`);
-});
+// Configure each bot
+setupBot(GeminiBot, Gemini, "Gemini Bot");
+setupBot(GroqBot, GroqAI, "Groq Bot");
 
-GroqBot.on("messageCreate", async (message) => {
-  if (!message.mentions.users.has(GroqBot.user.id)) return;
-  await handleMessage(message, GroqAI, "Groq Bot");
-});
-
-// Login both bots with their respective tokens
-GeminiBot.login(process.env.DISCORD_GEMINI_TOKEN);
-GroqBot.login(process.env.DISCORD_GROQ_TOKEN);
+// Login all bots with error handling
+GeminiBot.login(process.env.DISCORD_GEMINI_TOKEN)
+  .catch(error => console.error("Gemini Bot login error:", error));
+GroqBot.login(process.env.DISCORD_GROQ_TOKEN)
+  .catch(error => console.error("Groq Bot login error:", error));
+SystemBot.login(process.env.DISCORD_ARCH_TOKEN)
+  .catch(error => console.error("System Bot login error:", error));
