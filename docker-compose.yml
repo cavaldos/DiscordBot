@@ -8,10 +8,5 @@ services:
     container_name: discordbot
     env_file:
       - .env
-    volumes:
-      - .:/app
-      - node_modules_data:/app/node_modules
     restart: unless-stopped
 
-volumes:
-  node_modules_data:

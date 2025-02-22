@@ -1,14 +1,26 @@
 FROM node:18
-WORKDIR /app
 
-# Yarn is already pre-installed in the Node 18 official image, so we remove the installation step
+# Thiết lập thư mục làm việc trong container
+WORKDIR /usr/src/app
 
-COPY package*.json ./
-COPY yarn.lock ./
+# Copy package.json và yarn.lock trước
+COPY package.json yarn.lock ./
 
-# Use yarn to install dependencies
-RUN yarn install
+# Cài đặt TypeScript globally trước
+RUN yarn global add typescript
 
+# Cài đặt các phụ thuộc
+RUN yarn install --frozen-lockfile
+
+# Copy toàn bộ mã nguồn của dự án vào thư mục làm việc trong container
 COPY . .
+COPY .env ./
 
-CMD ["yarn", "start"]
+# Biên dịch ứng dụng TypeScript sang JavaScript
+RUN yarn build
+
+# Mở cổng mà ứng dụng sẽ chạy trên đó
+EXPOSE 3003
+
+# Chạy ứng dụng
+CMD ["node", "dist/server.js"]
