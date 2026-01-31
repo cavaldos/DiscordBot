@@ -1,46 +1,51 @@
-# Discord Bot
+# ArchBot - Discord System Bot
 
-A Discord bot built with Discord.js that helps manage and enhance your Discord server.
-
-## Features
-
-- Command handling system
-- Basic moderation commands
-- Fun and utility commands
-- Easy to extend and customize
-
-## Prerequisites
-
-- Node.js v16.9.0 or higher
-- Discord.js v14
-- A Discord Bot Token
+A Discord bot that supports running system commands and managing the server.
 
 ## Installation
 
-1. Clone this repository
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   yarn install
+   ```
+3. Create a `.env` file with your Bot Token:
+   ```
+   DISCORD_ARCH_TOKEN=your_bot_token_here
+   ./compress-env restore  -p <password>  # If using compress-env
+   ```
+4. Run the bot:
+   ```bash
+   yarn dev   # Development mode
+   yarn start # Production mode
+   ```
 
-```bash
-git clone github.com/your-username/discord-bot
+## Usage Guide
+
+### 1. `/cmd <command>` - Run shell commands
+
+Execute shell commands directly on the server.
+
+**Examples:**
+```
+/cmd ls -la
+/cmd pwd
+/cmd whoami
 ```
 
-2. Install dependencies
+### 2. `@ArchBot ip` - Get public IP
 
-```bash
-npm install
+Mention the bot with the keyword `ip` to get the server's public IP address.
+
+**Examples:**
 ```
-
-3. Rename `.env.example` to `.env` and add your Discord Bot Token
-4. Start the bot
-
-```bash
-npm start
-npm run dev # for development
-
+@ArchBot ip
+@ArchBot show me ip
 ```
+## Security Notes
 
-5. google colab
-```shell
-!sudo apt update
-!sudo apt install -y pciutils
-!curl -fsSL https://ollama.com/install.sh | sh
-```
+⚠️ **Warning:** The `/cmd` command can execute any shell command. Use the bot only in private servers and restrict access permissions.
+
+## Author
+
+[cavaldos](https://github.com/cavaldos)

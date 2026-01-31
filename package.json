@@ -1,7 +1,7 @@
 {
   "name": "discordbot",
   "version": "1.0.0",
-  "description": "A Discord bot project that utilizes the Groq API for dynamic interactions.",
+  "description": "A Discord bot with system commands",
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,18 +12,13 @@
   "keywords": [
     "discord",
     "discordbot",
-    "groq",
-    "groq-api",
-    "bot",
-    "api",
-    "google"
+    "bot"
   ],
   "author": "cavaldos",
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "axios": "^1.7.9",
-    "child_process": "^1.0.2",
     "discord.js": "^14.17.3",
     "dotenv": "^16.4.7",
     "groq-sdk": "^0.13.0",

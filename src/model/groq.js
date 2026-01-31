@@ -1,45 +1,25 @@
-require("dotenv").config();
 const Groq = require("groq-sdk");
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
 
-// Lưu trữ context của cuộc trò chuyện
-let conversation = [];
-let lastInteraction = Date.now();
+let groq;
 
-async function GroqAI(question) {
+try {
+  groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+} catch (error) {
+  console.error("Failed to initialize Groq:", error.message);
+}
+
+async function GroqAI(prompt) {
+  if (!groq) return "Groq chưa được khởi tạo. Kiểm tra API key.";
+
   try {
-    const now = Date.now();
-    if (conversation.length && now - lastInteraction > 200000) {
-      conversation = [];
-    }
-    conversation.push({
-      role: "user",
-      content: question,
-    });
     const chatCompletion = await groq.chat.completions.create({
-      messages: conversation,
+      messages: [{ role: "user", content: prompt }],
       model: "llama-3.3-70b-versatile",
-      temperature: 0.1,
-      max_tokens: 1024,
-      top_p: 1,
-      stop: null,
-      stream: false,
     });
-
-    const answer = chatCompletion.choices[0].message.content;
-    conversation.push({
-      role: "assistant",
-      content: answer,
-    });
-
-    lastInteraction = Date.now();
-
-    return answer;
+    return chatCompletion.choices[0]?.message?.content || "Không có phản hồi.";
   } catch (error) {
-    console.error("Error in GroqAI:", error);
-    throw error;
+    console.error("Groq API error:", error.message);
+    return `Lỗi Groq: ${error.message}`;
   }
 }
 

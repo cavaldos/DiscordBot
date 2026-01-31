@@ -1,117 +1,148 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits } = require("discord.js");
-const { Gemini } = require("./model/google");
-const { GroqAI } = require("./model/groq");
-const splitMessage = require("./config/splitMessage");
 const getPublicIP = require("./config/getIP");
-const { runCommand, runCommandPromise } = require("./config/runcommand");
-// Initialize bots with common intents
-const commonIntents = [
-  GatewayIntentBits.Guilds,
-  GatewayIntentBits.GuildMessages,
-  GatewayIntentBits.MessageContent,
-];
+const { Gemini } = require("./model/gemini");
+const { GroqAI } = require("./model/groq");
 
-const createBot = () => new Client({ intents: commonIntents });
+const SystemBot = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 
-const GeminiBot = createBot();
-const GroqBot = createBot();
-const SystemBot = createBot();
-
-// Set up System Bot events
 SystemBot.once("ready", () => {
   console.log(`System Bot đã sẵn sàng! Đăng nhập với tên: ${SystemBot.user.tag}`);
 });
 
+const HELP_MESSAGE = `
+🤖 **ArchBot - Hướng Dẫn Sử Dụng**
+
+**Các Lệnh Chính:**
+
+📍 **AI Commands:**
+\`/gemini <câu hỏi>\` - Chat với Gemini AI
+\`/groq <câu hỏi>\` - Chat với Groq AI
+
+💻 **System Commands:**
+\`/cmd <command>\` - Chạy lệnh shell trên server
+\`@ArchBot ip\` - Lấy địa chỉ IP public
+
+ℹ️ **Khác:**
+\`@ArchBot\` - Xem hướng dẫn này
+
+**Ví dụ:**
+- \`/gemini Làm thế nào để học lập trình\`
+- \`/groq Giải thích về AI là gì\`
+- \`@ArchBot ip\`
+`;
+
 SystemBot.on("messageCreate", async (message) => {
-  // Ignore messages from bots
   if (message.author.bot) return;
 
-  // Allow running arbitrary commands with /cmd prefix
-  if (message.content.startsWith('/cmd ')) {
-    const { exec } = require('child_process');
+  // Command: /help
+  if (message.content === "/help" || message.content === "/help " || 
+      (message.mentions.has(SystemBot.user.id) && message.content.toLowerCase().includes("help"))) {
+    try {
+      await message.reply(HELP_MESSAGE);
+    } catch (err) {
+      console.error("Help command error:", err);
+    }
+    return;
+  }
+
+  // Command: /cmd <command>
+  if (message.content.startsWith("/cmd ")) {
+    const { exec } = require("child_process");
     const cmd = message.content.slice(5).trim();
     try {
       await message.channel.sendTyping();
-      exec(cmd, (error, stdout, stderr) => {
+      exec(cmd, async (error, stdout, stderr) => {
         if (error) {
           console.error(`Error executing command "${cmd}":`, error.message);
           return message.reply(`Error: ${error.message}`);
         }
-        const response = stdout || stderr;
-        message.reply(`Command Output:\n${response}`);
+        let response = stdout || stderr || "Command executed (no output)";
+        // Remove ANSI color codes
+        response = response.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
+        // Truncate if too long (Discord limit: 2000 chars)
+        const maxLength = 1900;
+        if (response.length > maxLength) {
+          response = response.substring(0, maxLength) + "\n... (truncated)";
+        }
+        await message.reply(`\`\`\`\n${response}\n\`\`\``);
       });
     } catch (err) {
-      console.error('Command execution error:', err);
+      console.error("Command execution error:", err);
       message.reply("Sorry, couldn't process your command.");
     }
     return;
   }
 
-  // Process messages that mention the bot
+  // Command: /gemini <prompt>
+  if (message.content.startsWith("/gemini ")) {
+    const prompt = message.content.slice(8).trim();
+    if (!prompt) return message.reply("Cú pháp: `/gemini <câu hỏi>`");
+
+    try {
+      await message.channel.sendTyping();
+      let response = await Gemini(prompt);
+      if (!response) return message.reply("AI không phản hồi hoặc có lỗi xảy ra.");
+
+      const maxLength = 1900;
+      if (response.length > maxLength) {
+        response = response.substring(0, maxLength) + "\n... (truncated)";
+      }
+      await message.reply(response);
+    } catch (err) {
+      console.error("Gemini error:", err);
+      message.reply("Sorry, couldn't process your request.");
+    }
+    return;
+  }
+
+  // Command: /groq <prompt>
+  if (message.content.startsWith("/groq ")) {
+    const prompt = message.content.slice(6).trim();
+    if (!prompt) return message.reply("Cú pháp: `/groq <câu hỏi>`");
+
+    try {
+      await message.channel.sendTyping();
+      let response = await GroqAI(prompt);
+      if (!response) return message.reply("AI không phản hồi hoặc có lỗi xảy ra.");
+
+      const maxLength = 1900;
+      if (response.length > maxLength) {
+        response = response.substring(0, maxLength) + "\n... (truncated)";
+      }
+      await message.reply(response);
+    } catch (err) {
+      console.error("Groq error:", err);
+      message.reply("Sorry, couldn't process your request.");
+    }
+    return;
+  }
+
+  // Commands that require mentioning the bot
   if (!message.mentions.users.has(SystemBot.user.id)) return;
+
   try {
     await message.channel.sendTyping();
     const content = message.content.toLowerCase();
-    if (content.includes('ip')) {
+
+    if (content.includes("ip")) {
       const ip = await getPublicIP();
       await message.reply(`Current Public IP: ${ip}`);
-    } else if (content.includes('deploy')) {
-      const output = await runCommandPromise();
-      await message.reply(`Deploy Results:\n${output}`);
     } else {
-      await message.reply('Xin lỗi, tôi chỉ hỗ trợ lệnh: ip và deploy.');
+      await message.reply(HELP_MESSAGE);
     }
   } catch (error) {
-    console.error('Error in System Bot:', error);
+    console.error("Error in System Bot:", error);
     await message.reply("Sorry, I couldn't process your request.");
   }
 });
 
-// Handle message processing for AI bots
-const handleMessage = async (message, aiModel, botName) => {
-  if (message.author.bot) return;
-
-  try {
-    console.log(`[${botName}] User message:`, message.content);
-    await message.channel.sendTyping();
-
-    const response = await aiModel(message.content);
-    if (!response) {
-      return message.reply("AI không phản hồi hoặc có lỗi xảy ra.");
-    }
-
-    const chunks = splitMessage(response);
-    for (const chunk of chunks) {
-      await message.reply(chunk);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-  } catch (error) {
-    console.error(`[${botName}] Error generating response:`, error);
-    await message.reply("Sorry, I couldn't process your request.");
-  }
-};
-
-// Set up bot event handlers
-const setupBot = (bot, aiModel, botName) => {
-  bot.once("ready", () => {
-    console.log(`${botName} đã sẵn sàng! Đăng nhập với tên: ${bot.user.tag}`);
-  });
-
-  bot.on("messageCreate", async (message) => {
-    if (!message.mentions.users.has(bot.user.id)) return;
-    await handleMessage(message, aiModel, botName);
-  });
-};
-
-// Configure each bot
-setupBot(GeminiBot, Gemini, "Gemini Bot");
-setupBot(GroqBot, GroqAI, "Groq Bot");
-
-// Login all bots with error handling
-GeminiBot.login(process.env.DISCORD_GEMINI_TOKEN)
-  .catch(error => console.error("Gemini Bot login error:", error));
-GroqBot.login(process.env.DISCORD_GROQ_TOKEN)
-  .catch(error => console.error("Groq Bot login error:", error));
-SystemBot.login(process.env.DISCORD_ARCH_TOKEN)
-  .catch(error => console.error("System Bot login error:", error));
+SystemBot.login(process.env.DISCORD_ARCH_TOKEN).catch((error) =>
+  console.error("System Bot login error:", error)
+);
