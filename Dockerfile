@@ -1,15 +1,12 @@
-FROM node:18
+FROM node:18-alpine
 # Thiết lập thư mục làm việc trong container
 WORKDIR /usr/src/app
-# Yarn is already pre-installed in the Node 18 official image, so we remove the installation step
-# Copy package.json và yarn.lock trước
-COPY package.json yarn.lock ./
-COPY yarn.lock ./
+# Yarn is already pre-installed in the Node 18 official image
+# Copy package.json
+COPY package.json ./
 
 # Cài đặt các phụ thuộc
 RUN yarn install --frozen-lockfile
-# Use yarn to install dependencies
-RUN yarn install
 
 COPY . .
 
