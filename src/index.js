@@ -3,6 +3,7 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const getPublicIP = require("./config/getIP");
 const { Gemini } = require("./model/gemini");
 const { GroqAI } = require("./model/groq");
+const { startMonitoring, getSystemInfo } = require("./monitor/cpu");
 
 const SystemBot = new Client({
   intents: [
@@ -14,6 +15,18 @@ const SystemBot = new Client({
 
 SystemBot.once("ready", () => {
   console.log(`System Bot đã sẵn sàng! Đăng nhập với tên: ${SystemBot.user.tag}`);
+  
+  const cpuThreshold = parseInt(process.env.CPU_THRESHOLD) || 30;
+  const alertChannelId = process.env.CPU_ALERT_CHANNEL_ID || "1486190161921577052";
+  
+  startMonitoring((alertMsg) => {
+    const channel = SystemBot.channels.cache.get(alertChannelId);
+    if (channel) {
+      channel.send(alertMsg);
+    } else {
+      console.log(`[CPU Monitor] Không tìm thấy channel ID: ${alertChannelId}`);
+    }
+  }, cpuThreshold);
 });
 
 const HELP_MESSAGE = `
@@ -27,6 +40,7 @@ const HELP_MESSAGE = `
 
 💻 **System Commands:**
 \`/cmd <command>\` - Chạy lệnh shell trên server
+\`/cpu\` - Xem thông tin CPU hiện tại
 \`@ArchBot ip\` - Lấy địa chỉ IP public
 
 ℹ️ **Khác:**
@@ -48,6 +62,18 @@ SystemBot.on("messageCreate", async (message) => {
       await message.reply(HELP_MESSAGE);
     } catch (err) {
       console.error("Help command error:", err);
+    }
+    return;
+  }
+
+  // Command: /cpu
+  if (message.content === "/cpu" || message.content === "/cpu ") {
+    try {
+      const info = getSystemInfo();
+      await message.reply(info);
+    } catch (err) {
+      console.error("CPU command error:", err);
+      message.reply("Không thể lấy thông tin CPU.");
     }
     return;
   }
