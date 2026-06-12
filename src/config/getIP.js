@@ -1,9 +1,11 @@
-const axios = require('axios');
-
 async function getPublicIP() {
     try {
-        const response = await axios.get('https://api.ipify.org?format=json');
-        return response.data.ip;
+        const response = await fetch('https://api.ipify.org?format=json');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        return data.ip;
     } catch (error) {
         console.error('Error fetching IP:', error);
         return 'Could not fetch IP';

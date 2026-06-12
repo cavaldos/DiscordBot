@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon ./src/index.js",
     "build": "node ./src/index.js",
-    "start": "node ./src/index.js"
+    "start": "node ./src/index.js",
+    "notion": "node ./notion/index.js"
   },
   "keywords": [
     "discord",
@@ -18,8 +19,8 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "axios": "^1.7.9",
     "discord.js": "^14.17.3",
+    "discord.js-selfbot-v13": "^3.7.1",
     "dotenv": "^16.4.7",
     "groq-sdk": "^0.13.0",
     "nodemon": "^3.1.9"
